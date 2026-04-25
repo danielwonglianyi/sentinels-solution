@@ -62,7 +62,7 @@ pipeline {
                                 -Dsonar.sources=. \
                                 -Dsonar.exclusions=node_modules/**,dist/**,coverage/** \
                                 -Dsonar.host.url=${SONAR_HOST_URL} \
-                                -Dsonar.login=${SONAR_TOKEN}
+                                -Dsonar.login=${SONAR_TOKEN} \
                                 -Dsonar.scm.provider=git \
                                 -Dsonar.qualitygate.wait=true \
                                 -Dsonar.qualitygate.timeout=300
