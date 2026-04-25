@@ -92,9 +92,8 @@ pipeline {
                 }
             }
         }
-    }
 
-    stage('Results Summary') {
+        stage('Results Summary') {
             steps {
                 script {
                     echo "=== SECURITY ANALYSIS SUMMARY ==="
