@@ -48,11 +48,11 @@ pipeline {
 
                     withSonarQubeEnv('SonarQube-Local') {
                         def scannerHome = tool 'SonarQube-Scanner'
-                        sh """
+                        sh '''
                             export PATH="\$PATH:${scannerHome}/bin"
                     
-                            sonar-scanner '-Dsonar.token=${SONAR_TOKEN}'
-                        """
+                            sonar-scanner -Dsonar.token=$SONAR_TOKEN
+                        '''
                     }
                 }
             }
