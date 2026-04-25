@@ -48,7 +48,7 @@ pipeline {
 
                     withSonarQubeEnv('SonarQube-Local') {
                         def scannerHome = tool name: 'SonarQube-Scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                        sh '''
+                        sh """
                             export PATH="$PATH:${scannerHome}/bin"
                             echo "Scanner path: ${scannerHome}"
 
@@ -66,7 +66,7 @@ pipeline {
                                 -Dsonar.scm.provider=git \
                                 -Dsonar.qualitygate.wait=true \
                                 -Dsonar.qualitygate.timeout=300
-                        '''
+                        """
                     }
                 }
             }
@@ -86,7 +86,7 @@ pipeline {
 
                         if (qg.status != 'OK') {
                             echo "❌ Quality Gate Failed!"
-                            ehco "Failed conditions:"
+                            echo "Failed conditions:"
 
                             if (qg.conditions) {
                                 qg.conditions.each { condition ->
