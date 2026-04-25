@@ -49,23 +49,9 @@ pipeline {
                     withSonarQubeEnv('SonarQube-Local') {
                         def scannerHome = tool name: 'SonarQube-Scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                         sh """
-                            export PATH="$PATH:${scannerHome}/bin"
-                            echo "Scanner path: ${scannerHome}"
-
-                            # Test SonarQube connection
-                            curl -l http://sonarqube:9000 || curl -l http://localhost:9000 || curl -l http://host.docker.internal:9000
-
-                            sonar-scanner \
-                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
-                                -Dsonar.projectVersion=1.0.${BUILD_NUMBER} \
-                                -Dsonar.sources=. \
-                                -Dsonar.exclusions=node_modules/**,dist/**,coverage/** \
-                                -Dsonar.host.url=${SONAR_HOST_URL} \
-                                -Dsonar.login=${SONAR_TOKEN} \
-                                -Dsonar.scm.provider=git \
-                                -Dsonar.qualitygate.wait=true \
-                                -Dsonar.qualitygate.timeout=300
+                            export PATH="\$PATH:${scannerHome}/bin"
+                    
+                            sonar-scanner -Dsonar.login=${SONAR_TOKEN}
                         """
                     }
                 }
