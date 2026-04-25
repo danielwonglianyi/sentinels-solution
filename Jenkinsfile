@@ -51,7 +51,7 @@ pipeline {
                         sh """
                             export PATH="\$PATH:${scannerHome}/bin"
                     
-                            sonar-scanner -Dsonar.login=${SONAR_TOKEN}
+                            sonar-scanner -Dsonar.token=$SONAR_TOKEN
                         """
                     }
                 }
