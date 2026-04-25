@@ -101,6 +101,7 @@ pipeline {
                             currentBuild.result = 'UNSTABLE'
                         } else {
                             echo "✅ Quality Gate Passed!"
+                        }
                     }
                 }
             }
