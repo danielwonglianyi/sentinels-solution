@@ -47,7 +47,7 @@ pipeline {
                     echo "Analyzing project: ${SONAR_PROJECT_KEY}"
 
                     withSonarQubeEnv(installationName: 'SonarQube-Scanner') {
-                        def scannerHome = tool 'SonarQube-Scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation', name: 'SonarQube-Scanner' 
+                        def scannerHome = tool name: 'SonarQube-Scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                         sh '''
                             export PATH="$PATH:${scannerHome}/bin"
                             echo "Scanner path: ${scannerHome}"
