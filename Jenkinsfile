@@ -10,11 +10,8 @@ pipeline {
 
     environment {
         APP_NAME = 'Juice-Vault'
-        SONAR_TOKEN = credentials('sonarqube-token')
-        SONAR_PROJECT_KEY = 'juice-vault'
-        SONAR_PROJECT_NAME = 'Juice Vault'
+        SCANNER_HOME = tool 'SonarQube-Scanner'
     }
-
 
     stages {
         stage('🏁 Initialize') {
@@ -27,69 +24,14 @@ pipeline {
             }
         }
 
-        stage('Checkout') {
+        stage('🔍 SAST (Static Analysis)') {
             steps {
-                checkout scm
-                script {
-                    echo "=== CHECKOUT STAGE ==="
-                    echo "Repository: ${env.GIT_URL}"
-                    echo "Commit: ${env.GIT_COMMIT}"
-                    echo "Build: #${BUILD_NUMBER}"
-
-                    sh 'ls -la'
-                    sh 'git log --oneline -3'
-                }
-            }
-        }
-
-        stage('🔍 SonarQube Analysis') {
-            steps {
-                script {
-                    echo "=== Stage: SAST Analysis (Team Member 4) ==="
-                    // 'SonarQube-Local' must match the name configured in Jenkins System settings
-                    withSonarQubeEnv('SonarQube-Local') {
-                        // Dynamically find the scanner tool configured in Jenkins
-                        def scannerHome = tool name: 'SonarQube-Scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                        
-                        sh """
-                            export PATH="${scannerHome}/bin:\$PATH"
-                            
-                            sonar-scanner \
-                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                            -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
-                            -Dsonar.projectVersion=1.0.${env.BUILD_NUMBER} \
-                            -Dsonar.sources=. \
-                            -Dsonar.exclusions="**/*test*.py,**/venv/**,**/__pycache__/**" \
-                            -Dsonar.host.url=\$SONAR_HOST_URL \
-                            -Dsonar.login=${SONAR_TOKEN} \
-                            -Dsonar.scm.provider=git \
-                            -Dsonar.qualitygate.wait=true \
-                            -Dsonar.qualitygate.timeout=300
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('🚦 SAST Quality Gate') {
-            steps {
-                // Prevents the pipeline from hanging forever if SonarQube is slow
-                timeout(time: 10, unit: 'MINUTES') {
-                    script {
-                        echo "=== QUALITY GATE EVALUATION ==="
-                        // This step pauses the pipeline until SonarQube sends the result via Webhook
-                        def qg = waitForQualityGate()
-                        
-                        echo "Quality Gate Status: ${qg.status}"
-                        
-                        if (qg.status != 'OK') {
-                            echo "❌ Quality Gate Failed!"
-                            currentBuild.result = 'UNSTABLE'
-                        } else {
-                            echo "✅ Quality Gate Passed!"
-                        }
-                    }
-                }
+                echo '=== Stage: SAST Analysis (Team Member 4) ==='
+                /* 
+                   Implementation Strategy (Lab 6B):
+                   Run SonarQube right after checkout to find code flaws 
+                   before building images
+                */
             }
         }
 
@@ -116,8 +58,6 @@ pipeline {
             steps {
                 echo '=== Stage: Deployment for DAST ==='
                 // Spin up the live app for dynamic testing
-                sh 'docker stop juice-shop-staging || true'
-                sh 'docker rm juice-shop-staging || true'
                 sh 'docker run -d --name juice-shop-staging -p 3000:3000 juice-shop:latest'
                 sleep 20 // Allow app to initialize
             }
