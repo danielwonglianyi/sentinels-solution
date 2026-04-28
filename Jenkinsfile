@@ -1,141 +1,97 @@
 pipeline {
     agent any
 
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5', daysToKeepStr: '10'))
+        disableConcurrentBuilds() // Avoid Docker port 3000 conflicts
+        timeout(time: 1, unit: 'HOURS') // Safety cutoff
+        timestamps()
+    }
+
     environment {
-        SONAR_TOKEN = credentials('sonarqube-token')
-        BUILD_NUMBER = "${env.BUILD_NUMBER}"
-        SONAR_PROJECT_KEY = 'Sentinel-JuiceShop'
-        SONAR_PROJECT_NAME = 'Sentinels SAST'
+        APP_NAME = 'Juice-Vault'
+        SCANNER_HOME = tool 'SonarQube-Scanner'
     }
 
     stages {
-        stage('Checkout') {
+        stage('🏁 Initialize') {
             steps {
                 script {
-                    echo "=== CHECKOUT STAGE ==="
-                    echo "Repository: ${env.GIT_URL}"
-                    echo "Commit: ${env.GIT_COMMIT}"
-                    echo "Build: ${env.BUILD_NUMBER}"
-                
-                    sh 'ls -la'
-                    sh 'git log --oneline -3'
+                    currentBuild.displayName = "#${env.BUILD_NUMBER} - ${env.APP_NAME}"
+                    currentBuild.description = "Security Analysis Pipeline"
                 }
+                echo "=== Starting DevSecOps Pipeline for ${env.APP_NAME} ==="
             }
         }
 
-        stage('Environment Setup') {
+        stage('🔍 SAST (Static Analysis)') {
             steps {
-                script {
-                    echo "=== ENVIRONMENT STAGE ==="
-                    sh '''
-                        echo "Node version: $(node -v)"
-
-                        echo "Project files:"
-                        ls -la
-
-                        echo "SonarQube configuration:"
-                        cat sonar-project.properties || echo "No sonar-project.properties found"
-                    '''
-                }
+                echo '=== Stage: SAST Analysis (Team Member 4) ==='
+                /* 
+                   Implementation Strategy (Lab 6B):
+                   Run SonarQube right after checkout to find code flaws 
+                   before building images
+                */
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('🛠️ Build Image') {
             steps {
-                script {
-                    echo "=== SONARQUBE ANALYSIS ==="
-                    echo "Analyzing project: ${SONAR_PROJECT_KEY}"
-
-                    withSonarQubeEnv('SonarQube-Local') {
-                        def scannerHome = tool 'SonarQube-Scanner'
-                        sh '''
-                            export PATH="\$PATH:${scannerHome}/bin"
-                    
-                            sonar-scanner -Dsonar.token=$SONAR_TOKEN
-                        '''
-                    }
-                }
-            }
-        }
-        
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    script {
-                        echo "=== QUALITY GATE EVALUATION ==="
-
-                        def qg = waitForQualityGate()
-
-                        echo "Quality Gate status: ${qg.status}"
-                        echo "Project: ${SONAR_PROJECT_KEY}"
-                        echo "Build: ${BUILD_NUMBER}"
-
-                        if (qg.status != 'OK') {
-                            echo "❌ Quality Gate Failed!"
-                            echo "Failed conditions:"
-
-                            if (qg.conditions) {
-                                qg.conditions.each { condition ->
-                                    if (condition.status != 'OK') {
-                                        echo " • ${condition.metricKey}: ${condition.actualValue} vs threshold: ${condition.errorThreshold})"
-                                    }
-                                }
-                            }
-
-                            // Mark as unstable for learning purposes
-                            echo "⚠ Marking build as UNSTABLE due to quality gate failure"
-                            currentBuild.result = 'UNSTABLE'
-                        } else {
-                            echo "✅ Quality Gate Passed!"
-                        }
-                    }
-                }
+                echo '=== Stage: Build Application Image ==='
+                // Build the Docker version of Juice Shop
+                sh 'docker build -t juice-shop:latest .'
             }
         }
 
-        stage('Results Summary') {
+        stage('📦 SCA (Dependency Scan)') {
             steps {
-                script {
-                    echo "=== SECURITY ANALYSIS SUMMARY ==="
-                    echo "🔍 Expected security issues in codebase:"
-                    echo "  • SQL injection vulnerabilities"
-                    echo "  • Hardcoded credentials and secrets"
-                    echo "  • Weak MD5 hashing algorithm"
-                    echo "  • Command injection potential"
-                    echo "  • Information disclosure in logging"
-                    echo ""
-                    echo "📊 View detailed results:"
-                    echo "🔗 SonarQube: http://localhost:9000/dashboard?id=${SONAR_PROJECT_KEY}"
-                    echo "🔧 Jenkins: ${env.BUILD_URL}"
-                }
+                echo '=== Stage: SCA Scan (Team Member 3) ==='
+                /* 
+                   Implementation Strategy (Lab 7C):
+                   Now that the image is built, use Trivy to scan for 
+                   vulnerabilities in both the OS and app libraries
+                */
+            }
+        }
+
+        stage('🚀 Deploy to Staging') {
+            steps {
+                echo '=== Stage: Deployment for DAST ==='
+                // Spin up the live app for dynamic testing
+                sh 'docker run -d --name juice-shop-staging -p 3000:3000 juice-shop:latest'
+                sleep 20 // Allow app to initialize
+            }
+        }
+
+        stage('🛡️ DAST (Dynamic Analysis)') {
+            steps {
+                echo '=== Stage: DAST Scan (Team Member 2) ==='
+                /* 
+                   Implementation Strategy (Lab 8B):
+                   Run ZAP, Nikto, or SQLMap against http://localhost:3000
+                */
             }
         }
     }
-    
+
     post {
         always {
+            echo '🧹 Performing Post-Build Cleanup...'
+            // Remove containers to free local resources
+            sh 'docker stop juice-shop-staging || true'
+            sh 'docker rm juice-shop-staging || true'
+            
             script {
-                echo "=== PIPELINE COMPLETION ==="
-                echo "Repository: ${env.GIT_URL}"
-                echo "Build: #${BUILD_NUMBER}"
-                echo "Duration: ${currentBuild.durationString}"
-                echo "Result: ${currentBuild.result ?: 'SUCCESS'}"
-                echo ""
-                echo "📊 SonarQube Dashboard: http://localhost:9000/dashboard?id=${SONAR_PROJECT_KEY}"
+                // Log completion time for the project report
+                def duration = currentBuild.durationString.replace(' and counting', '')
+                echo "⏱ Pipeline completed in ${duration}"
             }
         }
         success {
-            echo "✅ Pipeline completed successfully!"
-            echo "🎉 Code analysis completed - review results in SonarQube"
-        }
-        unstable {
-            echo "⚠️  Pipeline completed with quality issues"
-            echo "🔍 Review failed quality gate conditions in SonarQube"
-            echo "📋 Address security vulnerabilities identified in analysis"
+            echo '🎉 Pipeline Succeeded - Security Reports are Ready'
         }
         failure {
-            echo "❌ Pipeline failed!"
-            echo "🛠️  Check build logs for error details"
+            echo '💥 Pipeline Failed - Review Scan Results for Vulnerabilities'
         }
     }
 }
