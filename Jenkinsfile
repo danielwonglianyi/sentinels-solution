@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS'
+    }
+
     options {
         buildDiscarder(logRotator(numToKeepStr: '5', daysToKeepStr: '10'))
         disableConcurrentBuilds() // Avoid Docker port 3000 conflicts
